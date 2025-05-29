@@ -23,8 +23,7 @@
 - **WebDriverManager**
 - **Liquibase**
 - **Lombok**
-- **Jsoup (для доп. парсинга)**
-- **JUnit 5 (тесты)**
+- **Jsoup**
 
 
 Результаты работы:
