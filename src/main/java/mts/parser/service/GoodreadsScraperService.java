@@ -2,57 +2,60 @@ package mts.parser.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import mts.parser.config.scraper.ScraperProperties;
+import mts.parser.config.webdriver.WebDriverFactory;
 import mts.parser.entity.Book;
 import mts.parser.repository.BookRepository;
+import mts.parser.webmapper.BookMapper;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.IntStream;
 
-@Service
 @RequiredArgsConstructor
 @Slf4j
+@Service
 public class GoodreadsScraperService {
 
     private final BookRepository bookRepository;
     private final ThreadPoolTaskExecutor threadPoolTaskExecutor;
+    private final WebDriverFactory webDriverFactory;
+    private final BookMapper bookMapper;
+    private final ScraperProperties scraperProperties;
 
     public void scrapeGoodreadsAsync(int pages) {
         List<CompletableFuture<Void>> futures = IntStream.rangeClosed(1, pages)
-                .mapToObj(page ->
-                        CompletableFuture.runAsync(() -> parsePage(page), threadPoolTaskExecutor)
-                ).toList();
+                .mapToObj(page -> CompletableFuture.runAsync(() -> parsePage(page), threadPoolTaskExecutor))
+                .toList();
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
         log.info("Парсинг завершён");
     }
 
     private void parsePage(int page) {
-        WebDriver driver = createHeadlessDriver();
+        WebDriver driver = webDriverFactory.createHeadlessDriver();
 
         try {
-            String url = "https://www.goodreads.com/list/show/1.Best_Books_Ever?page=" + page;
+            String url = buildUrlForPage(page);
             driver.get(url);
 
-            List<WebElement> books = driver.findElements(By.cssSelector("tr[itemtype='http://schema.org/Book']"));
+            List<WebElement> bookElements = driver.findElements(By.cssSelector(scraperProperties.getBookSelector()));
 
-            List<Book> parsedBooks = books.stream()
-                    .map(this::tryParseBook)
-                    .filter(Objects::nonNull)
+            List<Book> parsedBooks = bookElements.stream()
+                    .map(this::mapBookSafely)
+                    .flatMap(Optional::stream)
                     .toList();
 
             bookRepository.saveAll(parsedBooks);
 
             long successCount = parsedBooks.size();
-            long failCount = books.size() - successCount;
+            long failCount = bookElements.size() - successCount;
 
             log.info("Страница {}: успешно = {}, ошибки = {}", page, successCount, failCount);
 
@@ -63,48 +66,11 @@ public class GoodreadsScraperService {
         }
     }
 
-    private WebDriver createHeadlessDriver() {
-        ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless=new");
-        options.addArguments("--window-size=1920,1080");
-        options.addArguments("--disable-gpu");
-        options.addArguments("--no-sandbox");
-        options.addArguments("--disable-dev-shm-usage");
-        options.addArguments("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90 Safari/537.36");
-        return new ChromeDriver(options);
+    private String buildUrlForPage(int page) {
+        return scraperProperties.getBaseUrl() + page;
     }
 
-    private Book tryParseBook(WebElement book) {
-        try {
-            return parseBook(book);
-        } catch (Exception e) {
-            log.warn("Ошибка парсинга книги: {}", e.getMessage(), e);
-            return null;
-        }
-    }
-
-    private Book parseBook(WebElement book) {
-        String title = getTextOrEmpty(book, ".bookTitle");
-        String author = getTextOrEmpty(book, ".authorName");
-        String ratingText = getTextOrEmpty(book, ".minirating");
-        String rating = ratingText.split(" ")[0];
-        String votes = ratingText.contains("—") ? ratingText.split("—")[1].replace("ratings", "").trim() : "";
-        String pageUrl = book.findElement(By.cssSelector(".bookTitle")).getAttribute("href");
-
-        return Book.builder()
-                .title(title)
-                .author(author)
-                .rating(rating)
-                .votes(votes)
-                .pageUrl(pageUrl)
-                .build();
-    }
-
-    private String getTextOrEmpty(WebElement parent, String cssSelector) {
-        try {
-            return parent.findElement(By.cssSelector(cssSelector)).getText();
-        } catch (Exception e) {
-            return "";
-        }
+    private Optional<Book> mapBookSafely(WebElement element) {
+        return bookMapper.fromElement(element);
     }
 }

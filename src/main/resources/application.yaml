@@ -21,7 +21,26 @@ spring:
 
 
 thread-pool-task-executor:
-  core-pool-size: 8
+  core-pool-size: 12
   max-pool-size: 12
   queue-capacity: 50
-  thread-name-prefix: ThreadPoolTaskExecutor-
+  thread-name-prefix: Scraper-
+
+webdriver:
+  args:
+    - --headless=new
+    - --disable-gpu
+    - --no-sandbox
+    - --disable-dev-shm-usage
+    - --window-size=1920,1080
+    - user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64)...
+
+scraper:
+  goodreads:
+    base-url: "https://www.goodreads.com/list/show/1.Best_Books_Ever?page="
+    book-selector: "tr[itemtype='http://schema.org/Book']"
+    selectors:
+      book: "tr[itemtype='http://schema.org/Book']"
+      title: ".bookTitle"
+      author: ".authorName"
+      rating: ".minirating"
