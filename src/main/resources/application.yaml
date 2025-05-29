@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: payment-service
+
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://payment-service-postgres:5432/parser_service_db
+    username: admin
+    password: password
+
+  liquibase:
+    change-log: classpath:/db/changelog/db.changelog-master.yaml
+
+  jpa:
+    show-sql: false
+    properties:
+      hibernate.hibernate.format_sql: true
+      hibernate.use_sql_comments: true
+      hibernate.jdbc.batch_size: 30
+
+
+thread-pool-task-executor:
+  core-pool-size: 8
+  max-pool-size: 12
+  queue-capacity: 50
+  thread-name-prefix: ThreadPoolTaskExecutor-
