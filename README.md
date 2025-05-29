@@ -26,5 +26,12 @@
 - **Jsoup (для доп. парсинга)**
 - **JUnit 5 (тесты)**
 
+
 Результаты работы:
 <img width="1560" alt="image" src="https://github.com/user-attachments/assets/29e9c3b5-b9c3-4f9f-8429-980d50f568ac" />
+
+**От старта парсинга до окончания парсинага 50 страниц - 53 секунды данных 5000 записей в БД**
+<img width="1592" alt="Снимок экрана 2025-05-29 в 17 07 08" src="https://github.com/user-attachments/assets/61e57ee8-2ae0-4ba7-bc47-5a6e17bcca60" />
+<img width="1580" alt="Снимок экрана 2025-05-29 в 17 06 49" src="https://github.com/user-attachments/assets/d5bd7e73-90b3-4afd-a170-da4d1a61ed2c" />
+
+
